@@ -62,10 +62,20 @@ for keySize in xrange(2,40):
 
 #print str(bestKeySize)+": "+ str(bestScore)
 
-blocks=[]
+blocks=[] #Break the code into blocks
 for i in xrange(0, len(lines), bestKeySize):
        
     blocks.append(lines[i:i+bestKeySize])
     #print lines[i:i+bestKeySize]
+
+transposedBlocks=[] #transpose them
+for i in xrange(0,bestKeySize):
+    word=""
+    for j in blocks:
+        word+=j[i]
+    transposedBlocks.append(word)
+
+print len(transposedBlocks[i]) for i in xrange(0,len(transposedBlocks)):
+    
 
 f.close()
