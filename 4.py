@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 import binascii
 import string
+from cryp import hexToBin, extendIntInBin, XOR
+
+
 
 f = open('4.txt')
 lines = f.readlines() #FILE TO LIST
@@ -13,19 +16,11 @@ lineCounter=0
 for line in lines:
 	lineCounter+=1
 	encoded=line.rstrip('\n') #CHOMP
-	encodedBin=""
-	decoded=""
-	for c in encoded:
-		encodedBin+=format(int(c,16),'04b')
-
-
-	for i in xrange(0x00,0xFF):
-		auxString=format(i, '08b')*(len(encodedBin)/8)
-		b1=int(auxString, 2)
-		b2=int(encodedBin, 2)
-
+	encodedBin=hexToBin(encoded)
 	
-		xor="%x" %(b1^b2)
+	for i in xrange(0x00,0xFF):
+		auxString=extendIntInBin(i,len(encodedBin))
+		xor=XOR(auxString,encodedBin,2)
 		if len(xor)%2==0: #Not nice but works. Some lines don't have an odd number of characters and script implodes. 
 			if all(char in string.printable for char in binascii.unhexlify(xor)): #Saves us from skimming through ugly lines
 				
