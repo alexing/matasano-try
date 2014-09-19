@@ -7,11 +7,11 @@ frequencies = {}
 
 def letterOccurrances(aString): 
     for character in aString:
-    	character=character.lower()
-	    if character in string.printable:
-	        if character not in frequencies.keys():
-	            frequencies[character]=0
-	        frequencies[character] += 1
+        character=character.lower()
+        if character in string.printable:
+            if character not in frequencies.keys():
+                frequencies[character]=0
+            frequencies[character] += 1
     return
 
 for subdir, dirs, files in os.walk(rootdir):
