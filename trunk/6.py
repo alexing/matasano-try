@@ -1,81 +1,48 @@
 #!/usr/bin/env python
-from __future__ import division
-import base64
+import cryp
 import binascii
 import string
+from collections import Counter
 
-
-def stringToBin(string):
-	return int(''.join(format(ord(c), '08b') for c in string),2)
-
-def hammingDistance(x,y):
-    "Calculate the Hamming distance between two bit strings"
-    assert len(x) == len(y)
-    x=stringToBin(x)
-    y=stringToBin(y)
-    count=0
-    z=x^y
-    while z:
-        count += 1
-        z &= z-1
-    return count
-
-assert hammingDistance("this is a test","wokka wokka!!!")==37
-keySizes=[]
-
+assert cryp.hammingDistance("this is a test","wokka wokka!!!")==37
 
 f = open('6.txt')
 lines = f.read() #FILE TO VARIABLE
 f.close()
 
+lines=cryp.base64ToHex(lines)
+keySizes=cryp.bruteForceKeySizes(lines)
+keyCandidates=[]
+for keySize in keySizes:
+    blocks=cryp.breakIntoAndTransposeBlocks(lines,keySize)
 
-f=open("out.txt","w+")
+    possibleKeys={}
+    for char in cryp.mostPossibleCharacters:
+        possibleKeys[char]=""
 
+    for block in blocks:
+        encodedBin=cryp.hexToBin(block.encode('hex'))#!!!!!!!!!!!!!!!!!!!!
 
-lines=(base64.b64decode(lines)).encode("hex")
-f.write(lines)
+        #What's the most repeated byte in the encoded string?
+        myCounter=Counter(encodedBin[i:i+8] for i in range(0,len(encodedBin),8))
+        mostRepeatedChar=myCounter.most_common()[0][0]
+        
+        #C=p*k
+        #Got C, we know possible P's... so let's find possible K's
+        for i in cryp.mostPossibleCharacters:
+            possibleKeyChar=int(binascii.hexlify(i), 16)^int(mostRepeatedChar,2)
+            auxString=cryp.extendIntInBin(possibleKeyChar,len(encodedBin))
+            xor=cryp.XOR(auxString,encodedBin,2)
+            if all(char in string.printable for char in binascii.unhexlify(xor)):
+                #Each possible character may trigger the key, we store them
+                #in a dictionary structure so they don't mix
+                possibleKeys[i]+=chr(possibleKeyChar)
 
-bestScore=1000 #digamos
-for keySize in xrange(2,40):
-
-    #distancias
-    dAB=hammingDistance(lines[0:keySize],lines[keySize:keySize*2])
-    dAC=hammingDistance(lines[0:keySize],lines[keySize*2:keySize*3])
-    dAD=hammingDistance(lines[0:keySize],lines[keySize*3:keySize*4])
-    dBC=hammingDistance(lines[keySize:keySize*2],lines[keySize*2:keySize*3])
-    dBD=hammingDistance(lines[keySize:keySize*2],lines[keySize*3:keySize*4])
-    dCD=hammingDistance(lines[keySize*2:keySize*3],lines[keySize*3:keySize*4])
-    
-    #promedios
-    aAB=dAB/keySize
-    aAC=dAC/keySize
-    aAD=dAD/keySize
-    aBC=dBC/keySize
-    aBD=dBD/keySize
-    aCD=dCD/keySize
-    #puntajes
-    score=(aAB+aAC+aAD+aBC+aBD+aCD)/6
-
-    if score<bestScore:
-        bestScore=score
-        bestKeySize=keySize
-
-#print str(bestKeySize)+": "+ str(bestScore)
-
-blocks=[] #Break the code into blocks
-for i in xrange(0, len(lines), bestKeySize):
-       
-    blocks.append(lines[i:i+bestKeySize])
-    #print lines[i:i+bestKeySize]
-
-transposedBlocks=[] #transpose them
-for i in xrange(0,bestKeySize):
-    word=""
-    for j in blocks:
-        word+=j[i]
-    transposedBlocks.append(word)
-
-print len(transposedBlocks[i]) for i in xrange(0,len(transposedBlocks)):
-    
-
-f.close()
+    #Now let's check which is the right one        
+    key=""
+    for possibleKey in possibleKeys:
+        if len(possibleKeys[possibleKey])==keySize:
+            
+            key=possibleKeys[possibleKey] #this one
+            xor=cryp.decodeRepeatingKeyXOR(lines,key) #where the magic happens
+            print "KEY: %s \nPLAINTEXT: %s" %(key, xor.decode("hex")) #voila

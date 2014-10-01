@@ -6,16 +6,24 @@
 from __future__ import division
 import base64
 import binascii
+import sys
+from nltk import wordpunct_tokenize
+from nltk.corpus import stopwords #### sudo apt-get install python-nltk
+from itertools import cycle
+
+
+mostPossibleCharacters=[' ','e','t','a','o','i','n']
 
 def hexToBase64(hexStr):
 	return base64.b64encode(hexStr.decode("hex"))
 
-def base64ToBytes(base64Str):
-	return (base64.b64decode(base64Str))
+def base64ToHex(base64Str):
+	return base64.b64decode(base64Str)
+	#return str(binascii.hexlify(binascii.a2b_base64(base64Str)))
 
 def XOR(buf1,buf2,base):
 	if len(buf1) != len(buf2):
-		raise Exception("Bufs must be same length")
+		raise Exception("Bufs must be same length %d!=%d" % (len(buf1), len(buf2)) )
 	b1=int(buf1, base)
 	b2=int(buf2, base)
 	
@@ -52,7 +60,7 @@ def hammingDistance(x,y):
 
 def bruteForceKeySizes(lines):
 	keySizes=[]
-	for keySize in xrange(2,40):
+	for keySize in range(2,40):
 
 	    #distancias
 	    dAB=hammingDistance(lines[0:keySize],lines[keySize:keySize*2])
@@ -76,34 +84,39 @@ def bruteForceKeySizes(lines):
 	keySizes.sort(key=lambda tup: tup[1])
 	return [item[0] for item in keySizes[:5]]
 
-def bruteForceXOR(bytes):
-	best = (0.0, None, None)
-    for keyBytes in range(0, 255):
-        try:
-            text = bytes([b1 ^ b2 for b1, b2 in zip(bytes, cycle(keyBytes))]).decode()
-            score = ##CALCULAR PROBA
-            if score > best[0]:
-                best = (score, keyBytes, text)
-        except UnicodeDecodeError:
-            pass
-    return best[1:]
-
-
 def breakIntoAndTransposeBlocks(lines,keySize):
-	blocks=[""]*keySize #Break the code into blocks
-	for i, byte in enumerate(lines):
-		blocks[i % keySize] += byte
-	return blocks
+	blocks=[]
+	tBlocks=[""]*keySize
+	for i in range(0,len(lines),keySize):
+		block=lines[i:i+keySize]
+		aux=0
+		for j in block:
+			tBlocks[aux]+=j
+			aux+=1
 
-#def breakIntoBlocks(lines,keySize):
-#	blocks=[] #Break the code into blocks
-#	for i in xrange(0, len(lines), keySize):
-#		blocks.append(lines[i:i+keySize])
-#	return blocks
-#def transposeBlocks(blocks,keySize):
-#	transposedBlocks=[] #transpose them
-#	for i in xrange(0,keySize):
-#		word=""
-#		for j in blocks:
-#			word+=j[i]
-#		transposedBlocks.append(word)
+	return tBlocks
+
+def getEngProbability(text):
+    tokens = wordpunct_tokenize(text)
+    words = [word.lower() for word in tokens]
+
+    # Compute per language included in nltk number of unique stopwords appearing in analyzed text
+    stopwords_set = set(stopwords.words('english'))
+    words_set = set(words)
+    common_elements = words_set.intersection(stopwords_set)
+
+    p = len(common_elements) # language "score"
+    return p
+
+
+def encodeRepeatingKeyXOR(plaintext,key):
+	binLine=''.join(format(ord(x), '08b') for x in plaintext)
+	auxString=''.join(format(ord(x), '08b') for x in key)
+	auxString=repeatToLength(auxString,len(binLine))
+	return XOR(binLine, auxString,2)
+
+def decodeRepeatingKeyXOR(ciphertext,key):
+    binLine=hexToBin(binascii.b2a_hex(ciphertext).decode())
+    auxString=''.join(format(ord(x), '08b') for x in key)
+    auxString=repeatToLength(auxString,len(binLine))
+    return XOR(binLine, auxString,2)
