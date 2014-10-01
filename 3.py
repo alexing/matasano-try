@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 import binascii
 import string
-from cryp import hexToBin, extendIntInBin, XOR
+from cryp import hexToBin, extendIntInBin, XOR, mostPossibleCharacters
 from collections import Counter
-
-mostPossibleCharacters=[' ','e','t','a','o','i','n']
 
 encoded="1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
 encodedBin=hexToBin(encoded)
