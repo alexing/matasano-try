@@ -120,3 +120,10 @@ def decodeRepeatingKeyXOR(ciphertext,key):
     auxString=''.join(format(ord(x), '08b') for x in key)
     auxString=repeatToLength(auxString,len(binLine))
     return XOR(binLine, auxString,2)
+
+def PKCS7(stringToPad,blockSize):
+	remainder=blockSize%len(stringToPad)
+	if remainder==0:
+		return stringToPad
+	return stringToPad+chr(remainder)*remainder
+	
