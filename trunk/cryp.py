@@ -10,6 +10,8 @@ import sys
 from nltk import wordpunct_tokenize
 from nltk.corpus import stopwords #### sudo apt-get install python-nltk
 from itertools import cycle
+from random import randint,random
+import operator
 from Crypto.Cipher import AES
 
 mostPossibleCharacters=[' ','e','t','a','o','i','n']
@@ -182,3 +184,24 @@ def decodeAES_CBC(ciphertext,key,iv):
 		prevBlock = block
 	return unpadPKCS7(decoded,blockSize)
 	#return decoded
+
+def randomAESKey():
+	return reduce(operator.add, ('%c' % randint(0, 255) for i in range(16)))
+
+def encryptionOracle(text):
+	#Add random prefix and random suffix, and then pkcs7 pad the resulting string
+	prefix=reduce(operator.add, ('%c' % randint(0, 255) for i in range(randint(5, 10))))
+	suffix=reduce(operator.add, ('%c' % randint(0, 255) for i in range(randint(5, 10))))
+	text=PKCS7(prefix+text+suffix,16)
+
+	#Generate random key and random probability
+	key=randomAESKey()
+	p=random()
+	#P(ECB)=0.5 and P(CBC)=0.5
+	if p<0.5: #ECB Mode
+		cipher=encodeAES_ECB(text,key)
+	else: #CBC Mode
+		iv=randomAESKey() #len(iv)==len(key) so we use the same function to randomize the iv
+		cipher=encodeAES_CBC(text,key,iv)
+
+	return cipher
