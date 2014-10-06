@@ -10,7 +10,7 @@ import sys
 from nltk import wordpunct_tokenize
 from nltk.corpus import stopwords #### sudo apt-get install python-nltk
 from itertools import cycle
-
+from Crypto.Cipher import AES
 
 mostPossibleCharacters=[' ','e','t','a','o','i','n']
 
@@ -18,7 +18,7 @@ def hexToBase64(hexStr):
 	return base64.b64encode(hexStr.decode("hex"))
 
 def base64ToHex(base64Str):
-	return base64.b64decode(base64Str)
+	return base64.standard_b64decode(base64Str)
 	#return str(binascii.hexlify(binascii.a2b_base64(base64Str)))
 
 def XOR(buf1,buf2,base):
@@ -31,6 +31,12 @@ def XOR(buf1,buf2,base):
 	if len(ret)%2!=0: #odd number padding
 		return "0"+ret
 	return ret
+
+def cryptXOR(plaintext,key):
+	return "".join(["%02x" % (ord(p) ^ ord(k)) for (p, k) in zip(plaintext, cycle(key))]).decode("hex")
+
+
+
 
 def hexToBin(hexStr):
 	encodedBin=""
@@ -121,9 +127,58 @@ def decodeRepeatingKeyXOR(ciphertext,key):
     auxString=repeatToLength(auxString,len(binLine))
     return XOR(binLine, auxString,2)
 
+
+def decodeAES_ECB(ciphertext,key):
+	cipher = AES.new(key, AES.MODE_ECB)
+	plaintext=cipher.decrypt(ciphertext)
+	return plaintext
+
+def encodeAES_ECB(plaintext,key):
+	cipher = AES.new(key, AES.MODE_ECB)
+	ciphertext=cipher.encrypt(plaintext)
+	return ciphertext
+
 def PKCS7(stringToPad,blockSize):
-	remainder=blockSize%len(stringToPad)
-	if remainder==0:
-		return stringToPad
-	return stringToPad+chr(remainder)*remainder
-	
+	assert 0 < blockSize < 255, 'blocksize must be between 0 and 255'
+  	assert len(stringToPad) > 0 , 'string length should be non-negative'
+
+	remainder = blockSize - (len(stringToPad) % blockSize)
+	return stringToPad + (chr(remainder) * remainder)
+
+
+def unpadPKCS7(stringToUnpad,blockSize):
+	padLen = ord(stringToUnpad[-1]) # last byte contains number of padding bytes
+	if padLen > blockSize:
+		return stringToUnpad
+	if padLen > len(stringToUnpad):
+		return stringToUnpad
+	return stringToUnpad[:-padLen]
+
+def encodeAES_CBC(plaintext,key,iv):
+	#Blocksize is assumed to be ==keysize
+	assert len(iv)==len(key)
+	blockSize=len(key)
+	prevBlock=iv
+	encoded=""
+	for i in range(0,len(plaintext),blockSize):
+		block=plaintext[i:i+blockSize]
+		if len(block)<blockSize:
+			block=PKCS7(block,blockSize)
+		cipherBlock=encodeAES_ECB(cryptXOR(block,prevBlock),key)
+		encoded+=cipherBlock
+		prevBlock=cipherBlock
+	return encoded
+
+def decodeAES_CBC(ciphertext,key,iv):
+	#Blocksize is assumed to be ==keysize
+	assert len(iv)==len(key)
+	blockSize=len(key)
+	prevBlock=iv
+	decoded=""
+	for i in range(0, len(ciphertext), blockSize):
+		block = ciphertext[i:i+blockSize]
+		plainBlock = cryptXOR(decodeAES_ECB(block, key), prevBlock)
+		decoded+=plainBlock
+		prevBlock = block
+	return unpadPKCS7(decoded,blockSize)
+	#return decoded
