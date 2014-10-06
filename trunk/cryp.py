@@ -205,3 +205,11 @@ def encryptionOracle(text):
 		cipher=encodeAES_CBC(text,key,iv)
 
 	return cipher
+
+def detectAESMode(ciphertext,blockSize=16):
+	chunks = [ciphertext[j:j+blockSize] for j in range(0, len(ciphertext), blockSize)]
+	repeated=len(chunks) - len(set(chunks)) #"Set" type groups duplicates, making them easy to spot
+	if repeated:
+		return 'ECB'
+	else:
+		return 'CBC'
